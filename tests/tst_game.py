@@ -9,7 +9,7 @@ class Game(HotGame):
     class Config:
         width = 800
         height = 600
-        caption = "Majo"
+        caption = "Game!"
 
     def __init__(self):
         super().__init__()

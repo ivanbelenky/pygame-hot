@@ -26,6 +26,11 @@ poetry install
 ```python
 
 class MyGame(HotGame):
+    class Config:
+        width = 800
+        height = 600
+        caption = "Game!"
+
     def __init__(self): ...
     def update(self, events): ...
 ```
