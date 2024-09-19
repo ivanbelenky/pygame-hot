@@ -14,6 +14,8 @@ PyGameHot is a hot-reloading utility for `Pygame`
 
 ## Installation
 
+You can copy and paste the contents of [this](https://github.com/ivanbelenky/pygame-hot/blob/main/pygamehot/hotreloader.py) file and import `HotGame` as needed. 
+
 ```bash
 git clone https://github.com/ivanbelenky/pygame-hot.git
 cd pygame-hot
