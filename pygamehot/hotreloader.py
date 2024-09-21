@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 from enum import Enum
 from collections import defaultdict
+from functools import wraps
 
 import pygame
 from pygame.locals import *
@@ -63,19 +64,22 @@ class HotGame(metaclass=HotGameMeta):
         return new_instance
     
 
+def rewind(method):
+    def wrapper(self, *args, **kwargs):
+        self.fp.seek(0)
+        r = method(self, *args, **kwargs)
+        self.fp.seek(0)
+        return r
+    return wrapper
+
+
 class FileDep:
     def __init__(self, name, path):
         self.same, self.path = name, path
         self.last_modified = os.path.getmtime(path)
-        self.validate()
         self.fp = open(path, "r")
-
-    def hash(self) -> str: 
-        self.fp.seek(0)
-        h = hex(hash(self.fp.read()))
-        self.fp.seek(0)
-        return h
-    
+        self.validate()
+        
     def close(self): return self.fp.close()
     def __del__(self): self.close()
 
@@ -85,14 +89,13 @@ class FileDep:
         if changed: self.last_modified = dt
         return changed
 
-    def read(self) -> str: 
-        self.fp.seek(0) # panic check
-        content = self.fp.read()
-        self.fp.seek(0)
-        return content
-
+    @rewind
+    def hash(self) -> str: return hex(hash(self.fp.read()))
+    @rewind
+    def read(self) -> str: return self.fp.read()
+    @rewind
     def validate(self):
-        try: compile(open(self.path, "r").read(), self.path, "exec")
+        try: compile(self.fp.read(), self.path, "exec")
         except Exception as e: raise InvalidFileDep(e)
 
 
