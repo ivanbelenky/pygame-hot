@@ -6,11 +6,12 @@ import traceback
 import logging
 from pathlib import Path
 from enum import Enum
+from collections import defaultdict
 
 import pygame
 from pygame.locals import *
 
-FPS = 60
+FPS = 200
 
 class GameNotFound(Exception): pass
 class InvalidFileDep(Exception): pass
@@ -20,6 +21,8 @@ class Commands(Enum):
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='[%(levelname)s]: %(message)s - %(asctime)s', level=logging.INFO)
+
+clock = pygame.time.Clock()
 
 class HotGameMeta(type):
     def __new__(cls, name, bases, attrs):
@@ -34,6 +37,14 @@ class HotGameMeta(type):
 
 
 class HotGame(metaclass=HotGameMeta):    
+    def __init__(self):
+        self.pressed_keys = defaultdict(lambda: False)
+    
+    def update_pressed_keys(self, events):
+        for event in events:
+            if event.type == KEYDOWN: self.pressed_keys[event.key] = True
+            elif event.type == KEYUP: self.pressed_keys[event.key] = False
+
     def start_game(self):
         pygame.init()
         if not hasattr(self, "screen"):
@@ -98,7 +109,7 @@ def setup_game(entry_point: FileDep):
     logger.info(f"Setting up game from {entry_point.path}")
     game_module, game_cls_name = _get_game(entry_point)
     game_code = compile(game_module, "<game>: ", "exec")
-    exec(game_code)
+    exec(game_code, locals())
     game_class: HotGame = locals()[game_cls_name]
     game: HotGame = game_class()
     return game
@@ -113,10 +124,14 @@ def run_game(game_fp: str | Path):
     deps = [entry_point]
     c = 0
     while True:
+        clock.tick(FPS)
         c += 1
         try:
             events = pygame.event.get()
+            game.update_pressed_keys(events)
             cmd = game.update(events)
+            
+            
             pygame.display.update()
             
             match cmd:
@@ -141,6 +156,7 @@ def run_game(game_fp: str | Path):
                 game.start_game()
                 c = 0
             c %= FPS
+
         except Exception as e:
             logger.error(e)
             logger.exception(traceback.format_exc())
