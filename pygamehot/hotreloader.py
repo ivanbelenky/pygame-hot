@@ -70,12 +70,17 @@ class FileDep:
         self.validate()
         self.fp = open(path, "r")
 
-    def hash(self) -> str: return hex(hash(open(self.path, "r").read()))
-    def close(self): return open(self.path, "r").close()
+    def hash(self) -> str: 
+        self.fp.seek(0)
+        h = hex(hash(self.fp.read()))
+        self.fp.seek(0)
+        return h
+    
+    def close(self): return self.fp.close()
     def __del__(self): self.close()
 
     def changed(self): 
-        dt = int(os.path.getmtime(self.path))
+        dt = os.path.getmtime(self.path)
         changed = self.last_modified != dt
         if changed: self.last_modified = dt
         return changed
@@ -105,7 +110,8 @@ def _get_game(code: str | FileDep) -> ast.Module:
     return game_module, game_cls_name
 
     
-def setup_game(entry_point: FileDep):
+def setup_game(entry_point: FileDep, game_class=None):
+    if game_class and game_class in locals(): del locals()[game_class]
     logger.info(f"Setting up game from {entry_point.path}")
     game_module, game_cls_name = _get_game(entry_point)
     game_code = compile(game_module, "<game>: ", "exec")
@@ -122,6 +128,7 @@ def run_game(game_fp: str | Path):
 
     # TODO: add all file dependencies
     deps = [entry_point]
+
     c = 0
     while True:
         clock.tick(FPS)
@@ -130,7 +137,6 @@ def run_game(game_fp: str | Path):
             events = pygame.event.get()
             game.update_pressed_keys(events)
             cmd = game.update(events)
-            
             
             pygame.display.update()
             
@@ -143,7 +149,7 @@ def run_game(game_fp: str | Path):
                 game_ready = False
                 while not game_ready:
                     try: 
-                        game = setup_game(entry_point)
+                        game = setup_game(entry_point, game.__class__.__name__)
                         game_ready = True
                         logger.info("RELOADING GAME")
                     except Exception as e:
