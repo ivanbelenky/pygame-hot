@@ -5,7 +5,7 @@ PyGameHot is a hot-reloading utility for `Pygame`
 <!-- add a disclaimer that this is still in the early stages of development 
 -->
 
-:warning: **Disclaimer:** I did not use pygame at all, I spent more time on building this utility than the library itself :D 
+:warning: **Disclaimer:** ~I did not use pygame at all, I spent more time on building this utility than the library itself :D~ I spent a couple of hours on pygame, take this with a grain of salt, this is a simple wrapper on a runnable HotGame class. Pretty simple and naive loop consiting of `check deps --> compile --> show errors if any --> configure game --> run game --> repeat`
 
 ## Features
 
