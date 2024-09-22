@@ -1,13 +1,14 @@
 # ivanbelenky 2024
 import os
 import ast
-import time
 import traceback
 import logging
+import importlib
 from pathlib import Path
 from enum import Enum
 from collections import defaultdict
 from functools import wraps
+from time import sleep
 
 import pygame
 from pygame.locals import *
@@ -23,7 +24,6 @@ class Commands(Enum):
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='[%(levelname)s]: %(message)s - %(asctime)s', level=logging.INFO)
 
-clock = pygame.time.Clock()
 
 class HotGameMeta(type):
     def __new__(cls, name, bases, attrs):
@@ -47,9 +47,9 @@ class HotGame(metaclass=HotGameMeta):
             elif event.type == KEYUP: self.pressed_keys[event.key] = False
 
     def start_game(self):
-        pygame.init()
         if not hasattr(self, "screen"):
             self.screen_from_settings(self._screen_settings)
+        self.clock = pygame.time.Clock()
 
     def screen_from_settings(self, settings):
         self.screen = pygame.display.set_mode((settings['width'], settings['height']))
@@ -114,7 +114,6 @@ def _get_game(code: str | FileDep) -> ast.Module:
 
     
 def setup_game(entry_point: FileDep, game_class=None):
-    if game_class and game_class in locals(): del locals()[game_class]
     logger.info(f"Setting up game from {entry_point.path}")
     game_module, game_cls_name = _get_game(entry_point)
     game_code = compile(game_module, "<game>: ", "exec")
@@ -124,17 +123,22 @@ def setup_game(entry_point: FileDep, game_class=None):
     return game
 
 
+
 def run_game(game_fp: str | Path):    
+    pygame.init()
     entry_point = FileDep("game", game_fp)
     game = setup_game(entry_point)
     game.start_game()
 
-    # TODO: add all file dependencies
+    # TODO: 
+    # - add all file dependencies
+    # - add file dependencies reload
     deps = [entry_point]
 
     c = 0
     while True:
-        clock.tick(FPS)
+        failed = False
+        game.clock.tick(FPS)
         c += 1
         try:
             events = pygame.event.get()
@@ -148,26 +152,27 @@ def run_game(game_fp: str | Path):
                     pygame.quit()
                     break
 
-            if (c % FPS == 0) and any(dep.changed() for dep in deps):
-                game_ready = False
-                while not game_ready:
-                    try: 
-                        game = setup_game(entry_point, game.__class__.__name__)
-                        game_ready = True
-                        logger.info("RELOADING GAME")
-                    except Exception as e:
-                        logger.error(e)
-                        logger.exception(traceback.format_exc())
-                        logger.info("Waiting for file changes...")
-                        while not any(dep.changed() for dep in deps): 
-                            time.sleep(2)
-
-                game.start_game()
-                c = 0
-            c %= FPS
-
         except Exception as e:
             logger.error(e)
             logger.exception(traceback.format_exc())
-            pygame.quit()
-            break
+            failed = True
+            while not any(dep.changed() for dep in deps): 
+                sleep(2)
+
+        if ((c % FPS == 0) and any(dep.changed() for dep in deps)) or failed:
+            game_ready = False
+            while not game_ready:
+                try: 
+                    game = setup_game(entry_point, game.__class__.__name__)
+                    game_ready = True
+                    logger.info("RELOADING GAME")
+                except Exception as e:
+                    logger.error(e)
+                    logger.exception(traceback.format_exc())
+                    logger.info("Waiting for file changes...")
+                    while not any(dep.changed() for dep in deps): 
+                        sleep(2)
+            game.start_game()
+            game.clock.tick(FPS)
+            c = 0
+        c %= FPS
