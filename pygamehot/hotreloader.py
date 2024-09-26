@@ -1,4 +1,5 @@
 # ivanbelenky 2024
+import importlib.util
 import os
 import ast
 import traceback
@@ -7,13 +8,14 @@ import importlib
 from pathlib import Path
 from enum import Enum
 from collections import defaultdict
-from functools import wraps
 from time import sleep
 
 import pygame
 from pygame.locals import *
 
-FPS = 200
+FPS = 60
+CHECK_SUFFIXES = (".py")
+FPC = 60 # frames per check
 
 class GameNotFound(Exception): pass
 class InvalidFileDep(Exception): pass
@@ -75,7 +77,7 @@ def rewind(method):
 
 class FileDep:
     def __init__(self, name, path):
-        self.same, self.path = name, path
+        self.name, self.path = name, path
         self.last_modified = os.path.getmtime(path)
         self.fp = open(path, "r")
         self.validate()
@@ -123,17 +125,41 @@ def setup_game(entry_point: FileDep, game_class=None):
     return game
 
 
+def get_file_deps(entry_point: FileDep) -> list[FileDep]:
+    files = [entry_point.fp]
+    file_deps = [entry_point]
+    seen = set()
+    while files:
+        f = files.pop()
+        tree = ast.parse(f.read())
+        imports = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
+        specs = []
+        for i in imports:
+            if isinstance(i, ast.Import):
+                for name in i.names:
+                    if not name.name: continue
+                    specs.append(importlib.util.find_spec(name.name))
+            if isinstance(i, ast.ImportFrom):
+                if i.module: 
+                    specs.append(importlib.util.find_spec(i.module))
+        for spec in specs:
+            if spec is None: continue
+            path = Path(spec.origin)
+            if path.exists() and path.suffix in CHECK_SUFFIXES and path not in seen:
+                seen.add(path)
+                dep = FileDep(spec.name, path)
+                file_deps.append(dep)
+                files.append(dep.fp)
+    return file_deps
+    
 
-def run_game(game_fp: str | Path):    
+def run_game(game_fp: str | Path):
     pygame.init()
     entry_point = FileDep("game", game_fp)
     game = setup_game(entry_point)
     game.start_game()
 
-    # TODO: 
-    # - add all file dependencies
-    # - add file dependencies reload
-    deps = [entry_point]
+    deps = get_file_deps(entry_point)
 
     c = 0
     while True:
@@ -159,11 +185,12 @@ def run_game(game_fp: str | Path):
             while not any(dep.changed() for dep in deps): 
                 sleep(2)
 
-        if ((c % FPS == 0) and any(dep.changed() for dep in deps)) or failed:
+        if ((c % FPC == 0) and any(dep.changed() for dep in deps)) or failed:
             game_ready = False
             while not game_ready:
                 try: 
                     game = setup_game(entry_point, game.__class__.__name__)
+                    deps = get_file_deps(entry_point)
                     game_ready = True
                     logger.info("RELOADING GAME")
                 except Exception as e:
@@ -175,4 +202,4 @@ def run_game(game_fp: str | Path):
             game.start_game()
             game.clock.tick(FPS)
             c = 0
-        c %= FPS
+        c %= FPC

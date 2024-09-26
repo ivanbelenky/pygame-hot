@@ -9,15 +9,15 @@ class Game(HotGame):
     class Config:
         width = 800
         height = 600
-        caption = "Game!"
+        caption = "Game"
 
     def __init__(self):
         super().__init__()
-        self.background = (135, 206, 255)
+        self.background = (135, 206, 25)
         self.ground_color = (0, 0, 0)
 
         self.player = pygame.Surface((100, 100))
-        self.player.fill((255, 0, 0))
+        self.player.fill((155, 120, 25))
         self.player_x = 300
         self.player_y = 450-3
 

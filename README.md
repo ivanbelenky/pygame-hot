@@ -11,6 +11,8 @@ PyGameHot is a hot-reloading utility for `Pygame`
 
 - Hot-reloading of game code
 - Easy-to-use base class for game development
+- copy-paste 1 file 
+- deep file dependencies
 
 ## Installation
 
