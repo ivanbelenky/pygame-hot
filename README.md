@@ -10,13 +10,17 @@ PyGameHot is a hot-reloading utility for `Pygame`
 ## Features
 
 - Hot-reloading of game code
-- Easy-to-use base class for game development
+- minimal-easy base class to wrap games & game loops
 - copy-paste 1 file 
 - deep file dependencies
 
+
+## Usage
+
+**You can copy and paste the contents of [this](https://github.com/ivanbelenky/pygame-hot/blob/main/pygamehot/hotreloader.py) file and import `HotGame` as needed.**
+
 ## Installation
 
-You can copy and paste the contents of [this](https://github.com/ivanbelenky/pygame-hot/blob/main/pygamehot/hotreloader.py) file and import `HotGame` as needed. 
 
 ```bash
 git clone https://github.com/ivanbelenky/pygame-hot.git
