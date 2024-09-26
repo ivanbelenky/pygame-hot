@@ -80,6 +80,7 @@ class FileDep:
         self.name, self.path = name, path
         self.last_modified = os.path.getmtime(path)
         self.fp = open(path, "r")
+        self.hash = self.content_hash()
         self.validate()
         
     def close(self): return self.fp.close()
@@ -87,12 +88,15 @@ class FileDep:
 
     def changed(self): 
         dt = os.path.getmtime(self.path)
-        changed = self.last_modified != dt
-        if changed: self.last_modified = dt
-        return changed
+        changed_dt = self.last_modified != dt
+        if self.last_modified == changed_dt: return False
+        hash = self.content_hash()
+        if self.hash == hash: return False
+        self.hash = hash
+        return True
 
     @rewind
-    def hash(self) -> str: return hex(hash(self.fp.read()))
+    def content_hash(self) -> str: return hex(hash(self.fp.read()))
     @rewind
     def read(self) -> str: return self.fp.read()
     @rewind
