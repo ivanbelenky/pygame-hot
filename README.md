@@ -32,6 +32,8 @@ poetry install
 ## `HotGame`
 
 ```python
+import pygame
+from pygamehot import HotGame, run_game
 
 class MyGame(HotGame):
     class Config:
@@ -41,5 +43,8 @@ class MyGame(HotGame):
 
     def __init__(self): ...
     def update(self, events): ...
+
+if __name__ == "__main__":
+    run_game(__file__)
 ```
 
